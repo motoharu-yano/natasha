@@ -2,8 +2,8 @@
 from setuptools import setup, find_packages
 
 
-with open('README.md') as file:
-    description = file.read()
+#with open('README.md') as file:
+#    description = file.read()
 
 
 setup(
@@ -11,7 +11,7 @@ setup(
     version='1.5.0',
 
     description='Named-entity recognition for russian language',
-    long_description=description,
+    long_description='',
     long_description_content_type='text/markdown',
 
     url='https://github.com/natasha/natasha',
