@@ -108,29 +108,26 @@ class AddrPart(AddrPart):
         return obj.AddrPart(part.value, part.type)
 
 
-DASH = eq('-')
-DOT = eq('.')
-OPEN_PARENTHESIS = eq('(')
-CLOSE_PARENTHESIS  = eq(')')
-SLASH  = eq('/')
+from .addr_details.tokens import DASH, DOT, OPEN_PARENTHESIS, CLOSE_PARENTHESIS, SLASH
+from .addr_details.tokens import ADJF, ADJS, PRTS, COMP, ADVB, NOUN, VERB, INT, TITLE, ANUM
 
-ADJF = gram('ADJF')
-PRTS = gram('PRTS')
-COMP = gram('COMP')
-ADVB = gram('ADVB')
-NOUN = gram('NOUN')
-VERB = gram('VERB')
-INT = type('INT')
-TITLE = is_title()
+from .addr_details.imeni import IMENI
 
-ANUM = rule(
-    INT,
-    DASH.optional(),
-    in_caseless({
-        'я', 'й', 'е',
-        'ое', 'ая', 'ий', 'ой'
-    })
-)
+from .addr_details.settlement_name import SETTLEMENT_NAME
+from .addr_details.addr_name import ADDR_NAME
+from .addr_details.addr_value import ADDR_VALUE
+
+from .addr_details.details.snt_details import SNT_DETAILS
+from .addr_details.details.territory_details import TERRITORY_DETAILS
+from .addr_details.details.uchastok_details import UCHASTOK_DETAILS
+from .addr_details.details.street_details import STREET_DETAILS
+from .addr_details.details.alley_details import ALLEY_DETAILS
+from .addr_details.details.proulok_details import PROULOK_DETAILS
+from .addr_details.details.dachny_poselok_details import DACHNY_POSELOK_DETAILS
+from .addr_details.details.line_details import LINE_DETAILS
+from .addr_details.details.proezd_details import PROEZD_DETAILS
+from .addr_details.details.pereulok_details import PEREULOK_DETAILS
+from .addr_details.details.bulvar_details import BULVAR_DETAILS
 
 
 #########
@@ -817,43 +814,6 @@ GOROD = or_(
 )
 
 
-##########
-#
-#  SETTLEMENT NAME
-#
-##########
-
-
-ADJS = gram('ADJS')
-SIMPLE = and_(
-    or_(
-        NOUN,  # Александровка, Заречье, Горки
-        ADJS,  # Кузнецово
-        ADJF,  # Никольское, Новая, Марьино
-    ),
-    TITLE,
-    not_(normalized('линия')),
-    not_(normalized('переулок')),
-)
-
-COMPLEX = rule(
-    SIMPLE,
-    DASH.optional(),
-    SIMPLE
-)
-
-NAME = or_(
-    rule(SIMPLE),
-    COMPLEX
-)
-
-SETTLEMENT_NAME = or_(
-    NAME,
-    rule(NAME, '-', INT),
-    rule(NAME, ANUM)
-)
-
-
 ###########
 #
 #   SELO
@@ -1002,34 +962,17 @@ SNT_WORDS = or_(
     Settlement.type.const('cнт')
 )
 
-SNT_DETAILS_WORDS1 = or_(
-    rule(
-            caseless('тер'),
-            DOT.optional()
-        )
+SNT_NUMERIC_PART = or_(
+    rule(INT),
+    rule('-', INT),
 )
 
-SNT_DETAILS_WORDS2 = or_(
+SNT_DETAILS_WORDS_DICT = or_(
     rule(caseless('СНТ')),
     rule(caseless('СН')),
     rule(caseless('СТ')),
     rule(caseless('ДНТ')),
     rule(caseless('ТСН')),
-)
-
-SNT_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, normalized('рыбсовхоз'), CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, INT, '-', INT, normalized('поле'), CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, INT, caseless('лет'), NOUN, SNT_DETAILS_WORDS1, SNT_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, NOUN, SNT_DETAILS_WORDS1, SNT_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, ADJF, SNT_DETAILS_WORDS1, SNT_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, normalized('энем'), normalized('пгт'), CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, normalized('энем'), CLOSE_PARENTHESIS),
-)
-
-SNT_NUMERIC_PART = or_(
-    rule(INT),
-    rule('-', INT),
 )
 
 SNT_NAME_VALUE = or_(
@@ -1040,16 +983,16 @@ SNT_NAME_VALUE = or_(
     rule(INT, caseless('лет'), 'СА', caseless('и'), 'ВМФ'),
     rule(INT, caseless('лет'), NOUN),
     rule(caseless('хах')),
-    rule(SNT_DETAILS_WORDS2, 'N', INT, 'ОСТ', 'ОАО', 'УМПО'),
-    rule(SNT_DETAILS_WORDS2, 'N', INT, NOUN),
-    rule(SNT_DETAILS_WORDS2, 'N', INT, ADJF),
-    rule(SNT_DETAILS_WORDS2, NOUN, SNT_NUMERIC_PART.optional()),
-    rule(SNT_DETAILS_WORDS2, ADJF, SNT_NUMERIC_PART.optional()),
-    rule(SNT_DETAILS_WORDS2, ADJF, SNT_NUMERIC_PART.optional(), NOUN),
-    rule(SNT_DETAILS_WORDS2, NOUN, SNT_NUMERIC_PART.optional(), 'ГП', NOUN),
-    rule(SNT_DETAILS_WORDS2, ADJF, SNT_NUMERIC_PART.optional(), 'ГП', NOUN),
-    rule(SNT_DETAILS_WORDS2, NOUN, SNT_NUMERIC_PART.optional(), 'СУ', 'КГРЭС'),
-    rule(SNT_DETAILS_WORDS2, ADJF, SNT_NUMERIC_PART.optional(), 'СУ', 'КГРЭС'),
+    rule(SNT_DETAILS_WORDS_DICT, 'N', INT, 'ОСТ', 'ОАО', 'УМПО'),
+    rule(SNT_DETAILS_WORDS_DICT, 'N', INT, NOUN),
+    rule(SNT_DETAILS_WORDS_DICT, 'N', INT, ADJF),
+    rule(SNT_DETAILS_WORDS_DICT, NOUN, SNT_NUMERIC_PART.optional()),
+    rule(SNT_DETAILS_WORDS_DICT, ADJF, SNT_NUMERIC_PART.optional()),
+    rule(SNT_DETAILS_WORDS_DICT, ADJF, SNT_NUMERIC_PART.optional(), NOUN),
+    rule(SNT_DETAILS_WORDS_DICT, NOUN, SNT_NUMERIC_PART.optional(), 'ГП', NOUN),
+    rule(SNT_DETAILS_WORDS_DICT, ADJF, SNT_NUMERIC_PART.optional(), 'ГП', NOUN),
+    rule(SNT_DETAILS_WORDS_DICT, NOUN, SNT_NUMERIC_PART.optional(), 'СУ', 'КГРЭС'),
+    rule(SNT_DETAILS_WORDS_DICT, ADJF, SNT_NUMERIC_PART.optional(), 'СУ', 'КГРЭС'),
 
     rule(SETTLEMENT_NAME, caseless('п'), SLASH, caseless('ф')),
 )
@@ -1132,6 +1075,7 @@ STANTSIA = rule(
 #
 #############
 
+
 TERRITORY_ABBREVIATIONS = dictionary({'ДНТ', 'СНТ', 'ТСН', 'ДО', 'ОНТ', 'ГСК', 'ПМК', 'СПК'})
 
 TERRITORY_WORDS = or_(
@@ -1139,16 +1083,6 @@ TERRITORY_WORDS = or_(
     rule(normalized('территория'), TERRITORY_ABBREVIATIONS.optional(), TERRITORY_ABBREVIATIONS.optional())
 ).interpretation(
     Settlement.type.const('территория')
-)
-
-TERRITORY_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, normalized('рыбсовхоз'), CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, INT, '-', INT, normalized('поле'), CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, INT, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, NOUN, INT, caseless('тер'), DOT.optional(), caseless('с'), CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, ADJF, caseless('района'), CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, caseless('сибтяжмаш'), CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, caseless('ЛДК'), DASH, INT,  CLOSE_PARENTHESIS),
 )
 
 TERRITORY_SUB_RULE = and_(
@@ -1204,7 +1138,9 @@ TERRITORY_NAME_VALUE = or_(
 
     rule(NOUN, ADJF, caseless('р'), DASH, caseless('на'), TERRITORY_NUMERIC_PART.optional(), TERRITORY_DETAILS.optional()),
     rule(ADJF, caseless('района')),
-    rule(caseless('в'), caseless('районе'), NOUN),
+    rule(caseless('в'), caseless('районе'), caseless('с'), NOUN),
+    rule(caseless('В'), caseless('районе'), caseless('д'), DOT.optional(), NOUN, TERRITORY_DETAILS.optional()),
+    rule(caseless('В'), caseless('районе'), caseless('с'), DOT.optional(), ADJS, TERRITORY_DETAILS.optional()),
 
     rule(caseless('хил'), VERB, TERRITORY_NUMERIC_PART.optional(), TERRITORY_DETAILS.optional()),
 
@@ -1223,9 +1159,6 @@ TERRITORY_NAME_VALUE = or_(
     rule(TERRITORY_ROAD, NOUN, DASH, ADJF),
     rule(TERRITORY_ROAD, NOUN, DASH, ADJF, PRTS),
     rule(TERRITORY_ROAD, NOUN, INT, DASH, ADJF),
-
-    rule(caseless('В'), caseless('районе'), caseless('д'), DOT.optional(), NOUN, TERRITORY_DETAILS.optional()),
-    rule(caseless('В'), caseless('районе'), caseless('с'), DOT.optional(), ADJS, TERRITORY_DETAILS.optional()),
 
     rule(DOROGA_PREFIX, NOUN, 'к', TERRITORY_SUB_PLACE),
     rule(DOROGA_PREFIX, NOUN, '-', NOUN, '-', NOUN),
@@ -1321,55 +1254,6 @@ UCHASTOK_WORDS = or_(
 ).interpretation(
     Settlement.type.const('участок')
 )
-
-
-# -----------
-
-UCHASTOK_DETAILS_TER_WORDS1 = or_(
-    rule(
-            caseless('тер'),
-            DOT.optional()
-        )
-)
-
-UCHASTOK_DETAILS_TER_WORDS2 = or_(
-    rule(caseless('СНТ')),
-    rule(caseless('СН')),
-    rule(caseless('ДНТ')),
-    rule(caseless('ТСН')),
-    rule(caseless('ГСК')),
-)
-
-UCHASTOK_DETAILS_TER = or_(
-    rule(UCHASTOK_DETAILS_TER_WORDS1, UCHASTOK_DETAILS_TER_WORDS2),
-    rule(UCHASTOK_DETAILS_TER_WORDS2, NOUN, UCHASTOK_DETAILS_TER_WORDS1, UCHASTOK_DETAILS_TER_WORDS2),
-    rule(UCHASTOK_DETAILS_TER_WORDS2, NOUN, UCHASTOK_DETAILS_TER_WORDS1),
-    rule(UCHASTOK_DETAILS_TER_WORDS2, NOUN, DASH, INT, UCHASTOK_DETAILS_TER_WORDS1),
-    rule(UCHASTOK_DETAILS_TER_WORDS2, ADJF, DASH, ADJF, UCHASTOK_DETAILS_TER_WORDS1),
-
-    rule(UCHASTOK_DETAILS_TER_WORDS1),
-    rule(UCHASTOK_DETAILS_TER_WORDS1, UCHASTOK_DETAILS_TER_WORDS2),
-    rule(UCHASTOK_DETAILS_TER_WORDS1, caseless('с')),
-)
-
-UCHASTOK_NAME_NUMERIC_PART = or_(
-    rule(INT),
-    rule('-', INT),
-)
-
-UCHASTOK_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, SETTLEMENT_NAME, NOUN, UCHASTOK_NAME_NUMERIC_PART.optional(), UCHASTOK_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, UCHASTOK_NAME_NUMERIC_PART.optional(), UCHASTOK_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, ADJF, UCHASTOK_NAME_NUMERIC_PART.optional(), UCHASTOK_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-
-    rule(OPEN_PARENTHESIS, NOUN, NOUN, UCHASTOK_NAME_NUMERIC_PART.optional(), UCHASTOK_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-
-    rule(OPEN_PARENTHESIS, UCHASTOK_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-
-    rule(OPEN_PARENTHESIS, NOUN, UCHASTOK_NAME_NUMERIC_PART.optional(), CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, ADJF, UCHASTOK_NAME_NUMERIC_PART.optional(), CLOSE_PARENTHESIS.optional()),
-)
-# -----------
 
 UCHASTOK_SUB_RULE1 = and_(
     NOUN,
@@ -1703,175 +1587,6 @@ POSELOK = rule(
     Settlement
 )
 
-# =========================================================================
-
-##############
-#
-#   ADDR PERSON
-#
-############
-
-
-ABBR = and_(
-    length_eq(1),
-    is_title()
-)
-
-PART = and_(
-    TITLE,
-    or_(
-        gram('Name'),
-        gram('Surn')
-    )
-)
-
-PART_TITLE3 = and_(
-    TITLE,
-    not_(normalized('дом'))
-)
-
-
-MAYBE_FIO = or_(
-    rule(TITLE, PART),
-    rule(PART, TITLE),
-
-    rule(TITLE, TITLE, PART_TITLE3),
-
-    rule(ABBR, '.'),
-    rule(ABBR, '.', PART_TITLE3),
-    rule(ABBR, '.', ABBR, '.', PART_TITLE3),
-    rule(TITLE, ABBR, '.', ABBR, '.')
-)
-
-POSITION_WORDS_ = or_(
-    rule(
-        dictionary({
-            'мичман',
-            'геолог',
-            'подводник',
-            'краевед',
-            'снайпер',
-            'штурман',
-            'бригадир',
-            'учитель',
-            'политрук',
-            'военком',
-            'ветеран',
-            'историк',
-            'пулемётчик',
-            'авиаконструктор',
-            'адмирал',
-            'академик',
-            'актер',
-            'актриса',
-            'архитектор',
-            'атаман',
-            'врач',
-            'воевода',
-            'генерал',
-            'губернатор',
-            'хирург',
-            'декабрист',
-            'разведчик',
-            'граф',
-            'десантник',
-            'конструктор',
-            'скульптор',
-            'писатель',
-            'поэт',
-            'капитан',
-            'князь',
-            'комиссар',
-            'композитор',
-            'космонавт',
-            'купец',
-            'лейтенант',
-            'лётчик',
-            'майор',
-            'маршал',
-            'матрос',
-            'подполковник',
-            'полковник',
-            'профессор',
-            'сержант',
-            'старшина',
-            'танкист',
-            'художник',
-            'герой',
-            'княгиня',
-            'строитель',
-            'дружинник',
-            'диктор',
-            'прапорщик',
-            'артиллерист',
-            'графиня',
-            'большевик',
-            'патриарх',
-            'сварщик',
-            'офицер',
-            'рыбак',
-            'брат',
-        })
-    ),
-    rule(normalized('генерал'), normalized('армия')),
-    rule(normalized('герой'), normalized('россия')),
-    rule(
-        normalized('герой'),
-        normalized('российский'), normalized('федерация')),
-    rule(
-        normalized('герой'),
-        normalized('советский'), normalized('союз')
-    ),
-)
-
-ABBR_POSITION_WORDS = rule(
-    in_caseless({
-        'адм',
-        'ак',
-        'акад',
-    }),
-    DOT.optional()
-)
-
-POSITION_WORDS = or_(
-    POSITION_WORDS_,
-    ABBR_POSITION_WORDS
-)
-
-MAYBE_PERSON = or_(
-    MAYBE_FIO,
-    rule(POSITION_WORDS, MAYBE_FIO),
-    rule(POSITION_WORDS, TITLE)
-)
-
-
-###########
-#
-#   IMENI
-#
-##########
-
-
-IMENI_WORDS = or_(
-    rule(
-        caseless('им'),
-        DOT.optional()
-    ),
-    rule(caseless('имени'))
-)
-
-IMENI = or_(
-    rule(
-        IMENI_WORDS.optional(),
-        MAYBE_PERSON
-    ),
-    rule(
-        IMENI_WORDS,
-        TITLE
-    )
-)
-
-
 ###########
 #
 #   DEREVNYA
@@ -1912,244 +1627,6 @@ DEREVNYA = rule(
 )
 
 
-##########
-#
-#   LET
-#
-##########
-
-
-LET_WORDS = or_(
-    rule(caseless('лет')),
-    rule(
-        DASH.optional(),
-        caseless('летия')
-    )
-)
-
-LET_NAME = in_caseless({
-    'влксм',
-    'ссср',
-    'алтая',
-    'башкирии',
-    'бурятии',
-    'дагестана',
-    'калмыкии',
-    'колхоза',
-    'комсомола',
-    'космонавтики',
-    'москвы',
-    'октября',
-    'пионерии',
-    'победы',
-    'приморья',
-    'района',
-    'совхоза',
-    'совхозу',
-    'татарстана',
-    'тувы',
-    'удмуртии',
-    'улуса',
-    'хакасии',
-    'целины',
-    'чувашии',
-    'якутии',
-})
-
-LET = rule(
-    INT,
-    LET_WORDS,
-    LET_NAME
-)
-
-
-##########
-#
-#    ADDR DATE
-#
-#############
-
-
-MONTH_WORDS = dictionary({
-    'январь',
-    'февраль',
-    'март',
-    'апрель',
-    'май',
-    'июнь',
-    'июль',
-    'август',
-    'сентябрь',
-    'октябрь',
-    'ноябрь',
-    'декабрь',
-})
-
-DAY = and_(
-    INT,
-    gte(1),
-    lte(31)
-)
-
-YEAR = and_(
-    INT,
-    gte(1),
-    lte(2100)
-)
-
-YEAR_WORDS = normalized('год')
-
-DATE = or_(
-    rule(DAY, MONTH_WORDS),
-    rule(YEAR, YEAR_WORDS)
-)
-
-
-#########
-#
-#   MODIFIER
-#
-############
-
-
-MODIFIER_WORDS_ = rule(
-    dictionary({
-        'большой',
-        'малый',
-        'средний',
-
-        'верхний',
-        'центральный',
-        'нижний',
-        'северный',
-        'дальний',
-
-        'первый',
-        'второй',
-
-        'старый',
-        'новый',
-
-        'красный',
-        'лесной',
-        'тихий',
-    }),
-    DASH.optional()
-)
-
-ABBR_MODIFIER_WORDS = rule(
-    in_caseless({
-        'б', 'м', 'н'
-    }),
-    DOT.optional()
-)
-
-SHORT_MODIFIER_WORDS = rule(
-    in_caseless({
-        'больше',
-        'мало',
-        'средне',
-
-        'верх',
-        'верхне',
-        'центрально',
-        'нижне',
-        'северо',
-        'дальне',
-        'восточно',
-        'западно',
-
-        'перво',
-        'второ',
-
-        'старо',
-        'ново',
-
-        'красно',
-        'тихо',
-        'горно',
-    }),
-    DASH.optional()
-)
-
-MODIFIER_WORDS = or_(
-    MODIFIER_WORDS_,
-    ABBR_MODIFIER_WORDS,
-    SHORT_MODIFIER_WORDS,
-)
-
-
-##########
-#
-#   ADDR NAME
-#
-##########
-
-
-ROD = gram('gent')
-
-SIMPLE = and_(
-    or_(
-        ADJF,  # Школьная
-        and_(NOUN, ROD),  # Ленина, Победы
-    ),
-    TITLE
-)
-
-COMPLEX_TITLE_RULE = and_(TITLE, not_(normalized('дом')))
-COMPLEX_NOUN_RULE = and_(NOUN, not_(normalized('дом')))
-
-COMPLEX = or_(
-    rule(
-        and_(ADJF, TITLE),
-        COMPLEX_NOUN_RULE
-    ),
-    rule(
-        TITLE,
-        DASH.optional(),
-        COMPLEX_TITLE_RULE
-    ),
-)
-
-# TODO
-EXCEPTION = dictionary({
-    'арбат',
-    'варварка'
-})
-
-MAYBE_NAME = or_(
-    rule(SIMPLE),
-    COMPLEX,
-    rule(EXCEPTION)
-)
-
-NAME = or_(
-    MAYBE_NAME,
-    LET,
-    DATE,
-    IMENI
-)
-
-NAME = rule(
-    MODIFIER_WORDS.optional(),
-    NAME
-)
-
-ADDR_CRF = tag('I').repeatable()
-
-NAME = or_(
-    NAME,
-    ANUM,
-    rule(NAME, ANUM),  # like имя 1-ая
-    rule(ANUM, NAME),  # like 1-ая имя
-    rule(INT, DASH.optional(), NAME),
-    rule(NAME, DASH.optional(), INT),
-    ADDR_CRF
-)
-
-ADDR_NAME = NAME
-
-
 ########
 #
 #    STREET
@@ -2165,84 +1642,6 @@ STREET_WORDS = or_(
     )
 ).interpretation(
     Street.type.const('улица')
-)
-
-STREET_DETAILS_TER_WORDS1 = or_(
-    rule(
-            caseless('тер'),
-            DOT.optional()
-        )
-)
-
-STREET_DETAILS_TER_WORDS2 = or_(
-    rule(caseless('СНТ')),
-    rule(caseless('СН')),
-    rule(caseless('ДНТ')),
-    rule(caseless('ТСН')),
-    rule(caseless('ГСК')),
-    rule(caseless('ДНП')),
-    rule(caseless('ОНТ')),
-)
-
-STREET_DETAILS_TER = or_(
-    rule(STREET_DETAILS_TER_WORDS1, STREET_DETAILS_TER_WORDS2),
-    rule(STREET_DETAILS_TER_WORDS2, NOUN, STREET_DETAILS_TER_WORDS1, STREET_DETAILS_TER_WORDS2),
-    rule(STREET_DETAILS_TER_WORDS2, NOUN, STREET_DETAILS_TER_WORDS1),
-    rule(STREET_DETAILS_TER_WORDS2, NOUN, DASH, INT, STREET_DETAILS_TER_WORDS1),
-    rule(STREET_DETAILS_TER_WORDS2, ADJF, DASH, ADJF, STREET_DETAILS_TER_WORDS1),
-    rule(STREET_DETAILS_TER_WORDS2, ADJF, NOUN, STREET_DETAILS_TER_WORDS1),
-    rule(STREET_DETAILS_TER_WORDS2, ADJF, NOUN, DASH, INT, STREET_DETAILS_TER_WORDS1),
-    rule(STREET_DETAILS_TER_WORDS2, ADJF, STREET_DETAILS_TER_WORDS1),
-
-    rule(STREET_DETAILS_TER_WORDS2, NOUN, NOUN, STREET_DETAILS_TER_WORDS1),
-    rule(STREET_DETAILS_TER_WORDS2, NOUN, INT, STREET_DETAILS_TER_WORDS1),
-
-    rule(STREET_DETAILS_TER_WORDS1),
-)
-
-STREET_DETAILS_MKR_WORDS1 = or_(
-    rule(
-            caseless('мкр'),
-            DOT.optional()
-        )
-)
-
-STREET_DETAILS_MKR = or_(
-    rule(NOUN, STREET_DETAILS_MKR_WORDS1),
-    rule(ADJF, STREET_DETAILS_MKR_WORDS1),
-    rule(ADJF, NOUN, STREET_DETAILS_MKR_WORDS1),
-)
-
-STREET_DETAILS_WORDS3 = or_(
-    rule(OPEN_PARENTHESIS, normalized('рыбсовхоз'), CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, INT, '-', INT, normalized('поле'), CLOSE_PARENTHESIS),
-    rule(caseless('гск')),
-)
-
-STREET_NAME_NUMERIC_PART = or_(
-    rule(INT),
-    rule('-', INT),
-)
-
-STREET_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, ADDR_NAME, NOUN, STREET_NAME_NUMERIC_PART.optional(), STREET_DETAILS_WORDS3.optional(), STREET_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, STREET_NAME_NUMERIC_PART.optional(), STREET_DETAILS_WORDS3.optional(), STREET_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, NOUN, STREET_NAME_NUMERIC_PART.optional(), STREET_DETAILS_WORDS3.optional(), STREET_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, ADJF, STREET_NAME_NUMERIC_PART.optional(), STREET_DETAILS_WORDS3.optional(), STREET_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, STREET_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, STREET_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-
-    rule(OPEN_PARENTHESIS, NOUN, NOUN, ADJF, NOUN, caseless('т'), CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, STREET_DETAILS_TER_WORDS2, NOUN, DASH, NOUN, caseless('те'), CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, NOUN, ADJF, NOUN, CLOSE_PARENTHESIS.optional()),
-
-    rule(OPEN_PARENTHESIS, NOUN, STREET_NAME_NUMERIC_PART.optional(), STREET_DETAILS_WORDS3.optional(), CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, ADJF, STREET_NAME_NUMERIC_PART.optional(), STREET_DETAILS_WORDS3.optional(), CLOSE_PARENTHESIS.optional()),
-
-    rule(OPEN_PARENTHESIS, INT, caseless('зона'), CLOSE_PARENTHESIS.optional()),
-
-    rule(OPEN_PARENTHESIS, STREET_DETAILS_MKR, STREET_NAME_NUMERIC_PART.optional(), STREET_DETAILS_WORDS3.optional(), CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, STREET_DETAILS_MKR, STREET_NAME_NUMERIC_PART.optional(), STREET_DETAILS_WORDS3.optional(), CLOSE_PARENTHESIS.optional()),
 )
 
 STREET_NAME_VALUE = or_(
@@ -2302,52 +1701,6 @@ ALLEY_WORDS = or_(
     Street.type.const('аллея')
 )
 
-ALLEY_DETAILS_TER_WORDS1 = or_(
-    rule(
-            caseless('тер'),
-            DOT.optional()
-        )
-)
-
-ALLEY_DETAILS_TER_WORDS2 = or_(
-    rule(caseless('СНТ')),
-    rule(caseless('СН')),
-    rule(caseless('ДНТ')),
-    rule(caseless('ТСН')),
-    rule(caseless('ГСК')),
-)
-
-ALLEY_DETAILS_TER = or_(
-    rule(ALLEY_DETAILS_TER_WORDS1, ALLEY_DETAILS_TER_WORDS2),
-    rule(ALLEY_DETAILS_TER_WORDS2, NOUN, ALLEY_DETAILS_TER_WORDS1, ALLEY_DETAILS_TER_WORDS2),
-    rule(ALLEY_DETAILS_TER_WORDS2, NOUN, ALLEY_DETAILS_TER_WORDS1),
-    rule(ALLEY_DETAILS_TER_WORDS2, NOUN, DASH, INT, ALLEY_DETAILS_TER_WORDS1),
-    rule(ALLEY_DETAILS_TER_WORDS2, ADJF, DASH, ADJF, ALLEY_DETAILS_TER_WORDS1),
-    rule(ALLEY_DETAILS_TER_WORDS2, ADJF, NOUN, ALLEY_DETAILS_TER_WORDS1),
-    rule(ALLEY_DETAILS_TER_WORDS2, ADJF, NOUN, DASH, INT, ALLEY_DETAILS_TER_WORDS1),
-    rule(ALLEY_DETAILS_TER_WORDS2, ADJF, ALLEY_DETAILS_TER_WORDS1),
-
-    rule(ALLEY_DETAILS_TER_WORDS1),
-)
-
-ALLEY_NAME_NUMERIC_PART = or_(
-    rule(INT),
-    rule('-', INT),
-)
-
-
-ALLEY_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, ADDR_NAME, NOUN, ALLEY_NAME_NUMERIC_PART.optional(), ALLEY_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, ALLEY_NAME_NUMERIC_PART.optional(), ALLEY_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, NOUN, ALLEY_NAME_NUMERIC_PART.optional(), ALLEY_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, ADJF, ALLEY_NAME_NUMERIC_PART.optional(), ALLEY_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, ALLEY_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, ALLEY_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-
-    rule(OPEN_PARENTHESIS, NOUN, ALLEY_NAME_NUMERIC_PART.optional(), CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, ADJF, ALLEY_NAME_NUMERIC_PART.optional(), CLOSE_PARENTHESIS.optional()),
-)
-
 ALLEY_NAME_VALUE = or_(
     rule(NOUN, ADDR_NAME, ALLEY_DETAILS.optional()),
     rule(NOUN, ALLEY_DETAILS.optional()),
@@ -2393,22 +1746,6 @@ PROULOK_WORDS = or_(
     Street.type.const('проулок')
 )
 
-PROULOK_DETAILS_WORDS1 = or_(
-    rule(
-            caseless('тер'),
-            DOT.optional()
-        )
-)
-
-PROULOK_DETAILS_WORDS2 = or_(
-    rule(caseless('СНТ')),
-    rule(caseless('ДНТ')),
-    rule(caseless('ТСН')),
-)
-
-PROULOK_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, ADDR_NAME, NOUN, PROULOK_DETAILS_WORDS1, PROULOK_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-)
 
 PROULOK_NAME_VALUE = or_(
     rule(INT.optional(), NOUN, ADDR_NAME, PROULOK_DETAILS.optional()),
@@ -2445,25 +1782,14 @@ DACHNY_POSELOK_WORDS = or_(
     Street.type.const('дачный поселок')
 )
 
-DACHNY_POSELOK_DETAILS_WORDS1 = or_(
-    rule(
-            caseless('тер'),
-            DOT.optional()
-        )
+DACHNY_POSELOK_DETAILS_ABBR = or_(
+    rule(caseless('сдт')),
 )
 
-DACHNY_POSELOK_DETAILS_WORDS2 = or_(
+DACHNY_POSELOK_DETAILS_WORDS_DICT = or_(
     rule(caseless('СНТ')),
     rule(caseless('ДНТ')),
     rule(caseless('ТСН')),
-)
-
-DACHNY_POSELOK_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, ADDR_NAME, NOUN, DACHNY_POSELOK_DETAILS_WORDS1, DACHNY_POSELOK_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-)
-
-DACHNY_POSELOK_DETAILS_ABBR = or_(
-    rule(caseless('сдт')),
 )
 
 DACHNY_POSELOK_NAME_VALUE = or_(
@@ -2471,9 +1797,9 @@ DACHNY_POSELOK_NAME_VALUE = or_(
     rule(INT.optional(), DACHNY_POSELOK_DETAILS_ABBR.optional(), NOUN, DACHNY_POSELOK_DETAILS.optional()),
     rule(INT.optional(), DACHNY_POSELOK_DETAILS_ABBR.optional(), ADDR_NAME, DACHNY_POSELOK_DETAILS.optional()),
 
-    rule(DACHNY_POSELOK_DETAILS_WORDS2, NOUN, ADDR_NAME, DACHNY_POSELOK_DETAILS.optional()),
-    rule(DACHNY_POSELOK_DETAILS_WORDS2, NOUN, DACHNY_POSELOK_DETAILS.optional()),
-    rule(DACHNY_POSELOK_DETAILS_WORDS2, ADDR_NAME, DACHNY_POSELOK_DETAILS.optional()),
+    rule(DACHNY_POSELOK_DETAILS_WORDS_DICT, NOUN, ADDR_NAME, DACHNY_POSELOK_DETAILS.optional()),
+    rule(DACHNY_POSELOK_DETAILS_WORDS_DICT, NOUN, DACHNY_POSELOK_DETAILS.optional()),
+    rule(DACHNY_POSELOK_DETAILS_WORDS_DICT, ADDR_NAME, DACHNY_POSELOK_DETAILS.optional()),
 )
 
 DACHNY_POSELOK_NAME = DACHNY_POSELOK_NAME_VALUE.interpretation(
@@ -2498,24 +1824,6 @@ LINE_WORDS = or_(
     rule(normalized('линия')),
 ).interpretation(
     Street.type.const('линия')
-)
-
-LINE_DETAILS_WORDS1 = or_(
-    rule(
-            caseless('тер'),
-            DOT.optional()
-        )
-)
-
-LINE_DETAILS_WORDS2 = or_(
-    rule(caseless('СНТ')),
-    rule(caseless('ДНТ')),
-    rule(caseless('ТСН')),
-)
-
-LINE_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, NOUN, LINE_DETAILS_WORDS1, LINE_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, caseless('хах'), LINE_DETAILS_WORDS1, LINE_DETAILS_WORDS2, CLOSE_PARENTHESIS),
 )
 
 LINE_NAME_VALUE = or_(
@@ -2650,24 +1958,6 @@ PROEZD_WORDS = or_(
     rule(normalized('проезд'))
 ).interpretation(
     Street.type.const('проезд')
-)
-
-PROEZD_DETAILS_WORDS1 = or_(
-    rule(
-            caseless('тер'),
-            DOT.optional()
-        )
-)
-
-PROEZD_DETAILS_WORDS2 = or_(
-    rule(caseless('СНТ')),
-    rule(caseless('ДНТ')),
-    rule(caseless('ТСН')),
-)
-
-PROEZD_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, NOUN, PROEZD_DETAILS_WORDS1, PROEZD_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, PROEZD_DETAILS_WORDS2, ADJF, NOUN, PROEZD_DETAILS_WORDS1, CLOSE_PARENTHESIS),
 )
 
 PROEZD_NAME_VALUE = or_(
@@ -2817,37 +2107,6 @@ PEREULOK_WORDS = or_(
     Street.type.const('переулок')
 )
 
-PEREULOK_DETAILS_WORDS1 = or_(
-    rule(
-            caseless('тер'),
-            DOT.optional()
-        )
-)
-
-PEREULOK_DETAILS_WORDS2 = or_(
-    rule(caseless('СНТ')),
-    rule(caseless('ДНТ')),
-    rule(caseless('ТСН')),
-)
-
-PEREULOK_DETAILS_WORDS3 = or_(
-    rule(caseless('мкр'), DOT.optional()),
-)
-
-PEREULOK_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, NOUN, PEREULOK_DETAILS_WORDS1, PEREULOK_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, ADJF, PEREULOK_DETAILS_WORDS1, PEREULOK_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, ADJF, NOUN, PEREULOK_DETAILS_WORDS1, PEREULOK_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, NOUN, INT, PEREULOK_DETAILS_WORDS1, PEREULOK_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, PEREULOK_DETAILS_WORDS2, NOUN, PEREULOK_DETAILS_WORDS1, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, PEREULOK_DETAILS_WORDS2, NOUN, PEREULOK_DETAILS_WORDS1, PEREULOK_DETAILS_WORDS2, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, PEREULOK_DETAILS_WORDS2, ADJF, NOUN, PEREULOK_DETAILS_WORDS1, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, PEREULOK_DETAILS_WORDS2, NOUN, DASH, INT, PEREULOK_DETAILS_WORDS1, CLOSE_PARENTHESIS),
-    rule(OPEN_PARENTHESIS, PEREULOK_DETAILS_WORDS2, ADJF, PEREULOK_DETAILS_WORDS1, CLOSE_PARENTHESIS),
-
-    rule(OPEN_PARENTHESIS, ADJF, PEREULOK_DETAILS_WORDS3, CLOSE_PARENTHESIS),
-)
-
 PEREULOK_NAME_VALUE = or_(
     rule(ADDR_NAME, PEREULOK_DETAILS.optional()),
     rule(NOUN, PEREULOK_DETAILS.optional()),
@@ -2988,52 +2247,6 @@ BULVAR_WORDS = or_(
     Street.type.const('бульвар')
 )
 
-BULVAR_DETAILS_TER_WORDS1 = or_(
-    rule(
-            caseless('тер'),
-            DOT.optional()
-        )
-)
-
-BULVAR_DETAILS_TER_WORDS2 = or_(
-    rule(caseless('СНТ')),
-    rule(caseless('СН')),
-    rule(caseless('ДНТ')),
-    rule(caseless('ТСН')),
-    rule(caseless('ГСК')),
-)
-
-BULVAR_DETAILS_TER = or_(
-    rule(BULVAR_DETAILS_TER_WORDS1, BULVAR_DETAILS_TER_WORDS2),
-    rule(BULVAR_DETAILS_TER_WORDS2, NOUN, BULVAR_DETAILS_TER_WORDS1, BULVAR_DETAILS_TER_WORDS2),
-    rule(BULVAR_DETAILS_TER_WORDS2, NOUN, BULVAR_DETAILS_TER_WORDS1),
-    rule(BULVAR_DETAILS_TER_WORDS2, NOUN, DASH, INT, BULVAR_DETAILS_TER_WORDS1),
-    rule(BULVAR_DETAILS_TER_WORDS2, ADJF, DASH, ADJF, BULVAR_DETAILS_TER_WORDS1),
-    rule(BULVAR_DETAILS_TER_WORDS2, ADJF, NOUN, BULVAR_DETAILS_TER_WORDS1),
-    rule(BULVAR_DETAILS_TER_WORDS2, ADJF, NOUN, DASH, INT, BULVAR_DETAILS_TER_WORDS1),
-    rule(BULVAR_DETAILS_TER_WORDS2, ADJF, BULVAR_DETAILS_TER_WORDS1),
-
-    rule(BULVAR_DETAILS_TER_WORDS1),
-)
-
-BULVAR_NAME_NUMERIC_PART = or_(
-    rule(INT),
-    rule('-', INT),
-)
-
-
-BULVAR_DETAILS = or_(
-    rule(OPEN_PARENTHESIS, ADDR_NAME, NOUN, BULVAR_NAME_NUMERIC_PART.optional(), BULVAR_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, BULVAR_NAME_NUMERIC_PART.optional(), BULVAR_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, NOUN, BULVAR_NAME_NUMERIC_PART.optional(), BULVAR_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, ADJF, BULVAR_NAME_NUMERIC_PART.optional(), BULVAR_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, NOUN, BULVAR_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, BULVAR_DETAILS_TER, CLOSE_PARENTHESIS.optional()),
-
-    rule(OPEN_PARENTHESIS, NOUN, BULVAR_NAME_NUMERIC_PART.optional(), CLOSE_PARENTHESIS.optional()),
-    rule(OPEN_PARENTHESIS, ADJF, BULVAR_NAME_NUMERIC_PART.optional(), CLOSE_PARENTHESIS.optional()),
-)
-
 BULVAR_NAME_VALUE = or_(
     rule(NOUN, ADDR_NAME, BULVAR_DETAILS.optional()),
     rule(NOUN, BULVAR_DETAILS.optional()),
@@ -3063,142 +2276,6 @@ BULVAR = or_(
     rule(BULVAR_NAME, BULVAR_WORDS)
 ).interpretation(
     Street
-)
-
-
-##############
-#
-#   ADDR VALUE
-#
-#############
-
-
-LETTER = in_caseless(set('абвгдежзиклмнопрстуфхцчшщэюя'))
-
-QUOTE = in_(QUOTES)
-
-LETTER = or_(
-    rule(LETTER),
-    rule(QUOTE, LETTER, QUOTE)
-)
-
-IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_PREFIX = or_(
-    rule(
-        caseless('двлд'),  # домовладение
-    ),
-    rule(
-        caseless('влд'),  # владение
-    ),
-    rule(
-        caseless('зд'),  # здание
-    ),
-    rule(
-        caseless('влд'),  # владение
-    ),
-    rule(
-        caseless('г'), '-', caseless('ж'), # гараж
-    ),
-)
-
-LITER_RULE = or_(
-    rule(caseless('литер')),
-    rule(caseless('литерБ')),
-    rule(caseless('литерВ')),
-    rule(caseless('литерД')),
-)
-
-IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_POSTFIX = or_(
-    rule(
-        caseless('соор'),  # сооружение
-    ),
-    rule(
-        caseless('стр'),  # строение
-    ),
-    rule(
-        LITER_RULE
-    ),
-)
-
-HOUSE_ROOM = or_(
-    rule(SLASH, INT)
-)
-
-DOM_VALUE_EXCEPTIONS = or_(
-    rule(INT, caseless('Естр'), INT),  # multiple problems here 1Е considered as первое like Село Ивановское 1е
-                                       # another problem that it can not distinguish first letter of house Е and lower case letters стр
-                                       # it thinks that this is one word
-    rule(INT, caseless('Астр'), INT),
-    rule(INT, caseless('Бстр'), INT),
-    rule(INT, caseless('Встр'), INT),
-    rule(INT, caseless('Гстр'), INT),
-    rule(INT, caseless('Дстр'), INT),
-    rule(INT, caseless('Жстр'), INT),
-    rule(INT, caseless('Истр'), INT),
-    rule(INT, caseless('Пстр'), INT),
-    rule(INT, caseless('Рстр'), INT),
-    rule(INT, caseless('Устр'), INT),
-
-    rule(INT, caseless('Асоор'), INT),
-
-    rule(INT, caseless('ка')),  # not sure what is going on here, maybe rule for only 1 letter after number is interfering, or корпус or word ending ка
-    rule(INT, caseless('кб')),
-    rule(INT, caseless('кв'), HOUSE_ROOM.optional()),
-    rule(INT, caseless('кг')),
-    rule(INT, caseless('кд')),
-    rule(INT, caseless('ке')),
-    rule(INT, caseless('кж')),
-    rule(INT, caseless('ки')),
-    rule(INT, caseless('вс')),
-
-    rule(INT, caseless('ат')),
-    rule(INT, caseless('гп')),
-    rule(INT, caseless('тп')),
-    rule(INT, caseless('эс')),
-    rule(INT, caseless('пс')),
-    rule(INT, caseless('ак'), INT),
-    rule(INT, caseless('кк')),
-
-    rule(INT, caseless('гкв')),
-)
-
-HOUSE_PART_NUMBER = or_(
-    rule(INT),
-)
-
-HOUSE_PART = or_(
-    rule(SLASH, HOUSE_PART_NUMBER.optional(), 'РП'),
-    rule(SLASH, HOUSE_PART_NUMBER.optional(), 'ТП'),
-    rule(SLASH, INT),
-)
-
-# house number with optional letter in the end
-VALUE = or_(
-    DOM_VALUE_EXCEPTIONS,
-    rule(INT, caseless('к'), INT),  # корпус
-    rule(INT, LETTER, HOUSE_PART.optional()),
-    rule(INT, HOUSE_PART.optional()),
-    rule(INT)
-)
-
-SEP = in_(r'/\-_')
-
-VALUE = or_(
-    rule(IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_PREFIX, VALUE),
-    rule(VALUE, IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_POSTFIX, VALUE),
-    rule(IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_POSTFIX, VALUE),
-    rule(IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_POSTFIX, VALUE, SEP, VALUE),
-    rule(IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_PREFIX, VALUE, IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_POSTFIX),
-    rule(IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_PREFIX, VALUE, IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_POSTFIX, VALUE),
-    rule(IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_PREFIX, VALUE, SEP, VALUE),
-    rule(IDENTIFICATION_ELEMENT_OF_ADDRESSED_OBJECT_PREFIX, VALUE, SEP, VALUE, SEP, VALUE),
-    rule(VALUE),  # house number with optional letter
-    rule(VALUE, SEP, VALUE),  # house number with optional letter, sep, another house number with optional letter
-    rule(VALUE, SEP, LETTER)  # house number with optional letter, sep, letter
-)
-
-ADDR_VALUE = rule(
-    eq('№').optional(),
-    VALUE
 )
 
 
